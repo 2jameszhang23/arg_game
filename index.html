@@ -1,0 +1,556 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>失踪补习夜 - ARG 桌面解谜</title>
+  <style>
+    :root{
+      --bg:#071018;
+      --panel:rgba(10,18,26,.92);
+      --panel-2:rgba(18,28,38,.96);
+      --line:#29404f;
+      --text:#d9e5ef;
+      --muted:#8ea5b5;
+      --accent:#7dd3fc;
+      --danger:#ff6b6b;
+      --ok:#86efac;
+      --warn:#facc15;
+      --shadow:0 18px 60px rgba(0,0,0,.55);
+    }
+    *{box-sizing:border-box}
+    html,body{margin:0;height:100%;font-family:"SF Pro Display","PingFang SC","Microsoft YaHei",sans-serif;background:#000;color:var(--text);overflow:hidden}
+    body{
+      background:
+        radial-gradient(circle at 15% 20%,rgba(80,120,160,.08),transparent 25%),
+        radial-gradient(circle at 80% 10%,rgba(130,180,255,.05),transparent 20%),
+        linear-gradient(180deg,#02070c,#071018 35%,#03060a 100%);
+    }
+    .noise::before{
+      content:"";position:fixed;inset:0;pointer-events:none;opacity:.06;
+      background-image:url('data:image/svg+xml;utf8,<svg xmlns="http://www.w3.org/2000/svg" width="120" height="120" viewBox="0 0 120 120"><filter id="n"><feTurbulence type="fractalNoise" baseFrequency="1.2" numOctaves="2" stitchTiles="stitch"/></filter><rect width="120" height="120" filter="url(%23n)" opacity="0.65"/></svg>');
+      mix-blend-mode:screen;
+    }
+    .hidden{display:none !important}
+    .screen{position:absolute;inset:0}
+    #intro{
+      display:flex;align-items:center;justify-content:center;padding:40px;
+      background:
+        linear-gradient(180deg,rgba(0,0,0,.72),rgba(0,0,0,.9)),
+        radial-gradient(circle at center,rgba(100,140,170,.12),transparent 40%);
+    }
+    .intro-card{
+      width:min(760px,92vw);padding:34px 32px;background:rgba(7,14,21,.88);border:1px solid rgba(125,211,252,.18);
+      box-shadow:var(--shadow);border-radius:18px;backdrop-filter:blur(8px);
+    }
+    .intro-card h1{margin:0 0 18px;font-size:34px;font-weight:700;letter-spacing:.08em}
+    .intro-card p{margin:0 0 14px;line-height:1.9;color:#d7e2ea;font-size:16px}
+    .intro-card .dim{color:var(--muted)}
+    .btn{
+      border:none;border-radius:12px;padding:12px 18px;background:linear-gradient(180deg,#1f4b63,#143141);color:#eaf7ff;
+      cursor:pointer;font-size:15px;letter-spacing:.04em;box-shadow:0 8px 24px rgba(0,0,0,.35);transition:.2s transform,.2s opacity,.2s background;
+    }
+    .btn:hover{transform:translateY(-1px);background:linear-gradient(180deg,#255a77,#17394a)}
+    .btn.secondary{background:linear-gradient(180deg,#2a3038,#161b22)}
+    .btn.danger{background:linear-gradient(180deg,#7f1d1d,#4d1111)}
+    .desktop{
+      background:
+        linear-gradient(180deg,rgba(0,0,0,.18),rgba(0,0,0,.42)),
+        radial-gradient(circle at center,rgba(90,150,190,.08),transparent 45%);
+    }
+    .wallpaper-overlay{position:absolute;inset:0;background:linear-gradient(180deg,transparent,rgba(0,0,0,.18) 50%,rgba(0,0,0,.38));pointer-events:none}
+    .boot-note{position:absolute;left:18px;bottom:52px;color:rgba(210,230,245,.56);font-size:12px;letter-spacing:.08em}
+    .desktop-icons{display:grid;grid-template-columns:repeat(2,112px);gap:18px;padding:24px;width:max-content}
+    .icon{
+      width:96px;text-align:center;color:#e7f1f8;cursor:pointer;user-select:none;
+    }
+    .icon-box{
+      width:68px;height:68px;margin:0 auto 8px;border-radius:16px;border:1px solid rgba(255,255,255,.08);display:grid;place-items:center;
+      background:linear-gradient(180deg,rgba(31,49,66,.9),rgba(10,18,26,.95));box-shadow:0 10px 28px rgba(0,0,0,.28);
+      font-size:30px;
+    }
+    .icon span{display:block;font-size:13px;line-height:1.35;text-shadow:0 2px 12px rgba(0,0,0,.55)}
+    .taskbar{
+      position:absolute;left:0;right:0;bottom:0;height:38px;background:rgba(8,14,21,.95);border-top:1px solid rgba(255,255,255,.06);
+      display:flex;align-items:center;justify-content:space-between;padding:0 12px;color:var(--muted);font-size:13px;backdrop-filter:blur(8px)
+    }
+    .task-left{display:flex;align-items:center;gap:10px}
+    .start-dot{width:10px;height:10px;border-radius:50%;background:#7dd3fc;box-shadow:0 0 10px rgba(125,211,252,.6)}
+    .window{
+      position:absolute;top:78px;left:150px;width:min(820px,88vw);height:min(540px,76vh);background:var(--panel);
+      border:1px solid rgba(125,211,252,.12);border-radius:16px;box-shadow:var(--shadow);display:flex;flex-direction:column;overflow:hidden;
+      backdrop-filter:blur(10px);
+    }
+    .window.small{width:min(520px,86vw);height:auto}
+    .window.medium{width:min(640px,86vw);height:min(460px,72vh)}
+    .window-title{
+      height:42px;padding:0 14px;display:flex;align-items:center;justify-content:space-between;background:rgba(255,255,255,.02);border-bottom:1px solid rgba(255,255,255,.06)
+    }
+    .title-left{display:flex;align-items:center;gap:10px;font-size:14px;color:#eef7ff}
+    .leds{display:flex;gap:6px}
+    .leds i{display:block;width:10px;height:10px;border-radius:50%}
+    .leds i:nth-child(1){background:#ff5f57}.leds i:nth-child(2){background:#febc2e}.leds i:nth-child(3){background:#28c840}
+    .close-btn{background:none;border:none;color:#a8bcc9;cursor:pointer;font-size:20px;line-height:1}
+    .window-body{flex:1;overflow:auto;padding:18px;background:linear-gradient(180deg,rgba(255,255,255,.01),rgba(255,255,255,0))}
+    .mail-list{display:grid;gap:10px}
+    .mail-item{
+      border:1px solid rgba(255,255,255,.08);background:rgba(255,255,255,.025);padding:14px;border-radius:12px;cursor:pointer;transition:.2s;
+    }
+    .mail-item:hover{background:rgba(255,255,255,.05)}
+    .mail-subject{font-size:15px;color:#eef7ff;margin-bottom:6px}
+    .mail-meta{font-size:12px;color:var(--muted)}
+    .reader{display:grid;gap:14px}
+    .mail-content,.note-box,.result-box,.search-entry,.terminal-box{
+      border:1px solid rgba(255,255,255,.08);background:rgba(255,255,255,.025);border-radius:12px;padding:14px;line-height:1.8;color:#dce7ef;
+    }
+    .input-row{display:flex;gap:10px;align-items:center;flex-wrap:wrap;margin-top:12px}
+    input[type="text"],input[type="password"]{
+      background:#09131b;border:1px solid #243746;color:#eaf5fc;border-radius:10px;padding:10px 12px;font-size:14px;min-width:220px;outline:none;
+    }
+    .hint{font-size:12px;color:var(--muted);margin-top:8px}
+    .status{font-size:13px;color:var(--muted)}
+    .danger-text{color:#ff9a9a}.ok-text{color:#9ae6b4}.warn-text{color:#fde68a}
+    .puzzle-lines{font-family:ui-monospace,SFMono-Regular,Menlo,monospace;white-space:pre-line;letter-spacing:.05em;font-size:15px}
+    .searchbar{display:flex;gap:10px;flex-wrap:wrap;margin-bottom:14px}
+    .search-log{display:grid;gap:12px}
+    .overlay{
+      position:absolute;inset:0;background:rgba(0,0,0,.6);display:flex;align-items:center;justify-content:center;padding:24px;z-index:100;
+    }
+    .popup{
+      width:min(540px,90vw);background:rgba(10,16,24,.96);border:1px solid rgba(255,255,255,.08);border-radius:16px;box-shadow:var(--shadow);padding:22px;
+    }
+    .popup h3{margin:0 0 12px;font-size:22px}
+    .popup p{margin:0 0 12px;line-height:1.9;color:#dce7ef}
+    .desktop-glitch{
+      animation:flicker 6s infinite;
+    }
+    @keyframes flicker{
+      0%,100%{filter:none}
+      48%{filter:none}
+      49%{filter:contrast(1.15) brightness(.92)}
+      50%{filter:none}
+      89%{filter:none}
+      90%{filter:brightness(.88)}
+      91%{filter:none}
+    }
+    .footer-note{margin-top:14px;color:var(--muted);font-size:12px}
+    .choice-bar{display:flex;gap:10px;flex-wrap:wrap;margin-top:16px}
+    @media (max-width:700px){
+      .desktop-icons{grid-template-columns:repeat(2,96px);gap:14px;padding:16px}
+      .window{left:4vw;top:66px;width:92vw;height:78vh}
+      .intro-card h1{font-size:28px}
+    }
+  </style>
+</head>
+<body class="noise">
+  <div id="intro" class="screen">
+    <div class="intro-card">
+      <h1>失踪补习夜</h1>
+      <p>那天本来只是一次再普通不过的单独补习。</p>
+      <p>你按约定的时间来到教学楼，走廊里安静得异常，连脚步声都会被空荡的墙面一层层反弹回来。推开教室门时，里面却空无一人。</p>
+      <p>Jamie 老师不在。灯也没有全开。只有讲台侧面的那台电脑还亮着，屏幕发出幽冷的白光，像是有人刚刚离开，又像是有人从未真正离开。</p>
+      <p>出于好奇，你走近了一些。屏幕没有锁定，桌面就这样敞开着，几项程序静静排列在那里，像是在等某个人来继续未完成的事情。</p>
+      <p class="dim">你忽然有一种很不舒服的感觉：这台电脑，似乎不是“忘了关”。它更像是……故意留给你看的。</p>
+      <div style="margin-top:22px">
+        <button class="btn" onclick="startGame()">开始游戏</button>
+      </div>
+    </div>
+  </div>
+
+  <div id="desktop" class="screen desktop desktop-glitch hidden">
+    <div class="desktop-icons">
+      <div class="icon" onclick="openApp('mail')">
+        <div class="icon-box">✉️</div>
+        <span>邮件</span>
+      </div>
+      <div class="icon" onclick="openApp('records')">
+        <div class="icon-box">🗂️</div>
+        <span>学生档案查询</span>
+      </div>
+      <div class="icon" onclick="openApp('cctv')">
+        <div class="icon-box">📹</div>
+        <span>教室监控查询</span>
+      </div>
+      <div class="icon" onclick="openApp('memo')">
+        <div class="icon-box">📝</div>
+        <span>备忘录</span>
+      </div>
+      <div class="icon" onclick="openApp('search')">
+        <div class="icon-box">🌐</div>
+        <span>网络搜索引擎</span>
+      </div>
+    </div>
+    <div class="wallpaper-overlay"></div>
+    <div class="boot-note">Q City Education Terminal / Session restored unexpectedly</div>
+    <div class="taskbar">
+      <div class="task-left"><span class="start-dot"></span><span>教学终端</span></div>
+      <div id="taskStatus">未登录用户</div>
+    </div>
+  </div>
+
+  <div id="windows"></div>
+  <div id="overlayRoot"></div>
+
+  <script>
+    const state={
+      phishingLoss:0,
+      wentToBasement:false,
+      jormUnlocked:false,
+      rootUnlocked:false,
+      badEnding:false
+    };
+
+    function escapeHtml(str=''){
+      return str.replace(/[&<>\"']/g,m=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[m]));
+    }
+
+    function startGame(){
+      document.getElementById('intro').classList.add('hidden');
+      document.getElementById('desktop').classList.remove('hidden');
+      updateTaskStatus();
+      setTimeout(()=>{
+        popup('异常提示','系统时间存在轻微偏移。部分缓存数据可能并非来自同一天。');
+      },700);
+    }
+
+    function updateTaskStatus(){
+      document.getElementById('taskStatus').textContent=`未登录用户 · 账户异常扣款：${state.phishingLoss}`;
+    }
+
+    function popup(title,content,buttons=`<button class="btn" onclick="closePopup()">确定</button>`){
+      document.getElementById('overlayRoot').innerHTML=`
+        <div class="overlay" id="globalPopup">
+          <div class="popup">
+            <h3>${title}</h3>
+            <div>${content}</div>
+            <div class="choice-bar">${buttons}</div>
+          </div>
+        </div>`;
+    }
+    function closePopup(){document.getElementById('overlayRoot').innerHTML='';}
+
+    function closeWindow(id){
+      const el=document.getElementById(id);
+      if(el)el.remove();
+    }
+
+    function openApp(app){
+      const id=`win_${app}_${Date.now()}`;
+      let title='',body='',cls='window';
+
+      if(app==='mail'){
+        title='邮件';
+        body=`
+          <div class="mail-list">
+            <div class="mail-item" onclick="readMail(1)">
+              <div class="mail-subject">【系统通知】账户安全验证即将过期</div>
+              <div class="mail-meta">发件人：support@q-edu-safe.co</div>
+            </div>
+            <div class="mail-item" onclick="readMail(2)">
+              <div class="mail-subject">【紧急】奖学金补贴待确认领取</div>
+              <div class="mail-meta">发件人：finance-qcity@edu-reward.live</div>
+            </div>
+            <div class="mail-item" onclick="readMail(3)">
+              <div class="mail-subject">Jamie：如果你看到这封邮件，请先看懂它</div>
+              <div class="mail-meta">发件人：jamie_local_draft</div>
+            </div>
+            <div class="mail-item" onclick="readMail(4)">
+              <div class="mail-subject">Q市警察局：关于您此前提交的报案记录</div>
+              <div class="mail-meta">发件人：noreply@qcity-police.gov</div>
+            </div>
+          </div>`;
+      }
+
+      if(app==='memo'){
+        title='备忘录';
+        body=`
+          <div class="note-box">
+            <strong>备忘录 01 / 未命名</strong><br><br>
+            我是 Jamie，一名计算机老师。<br>
+            很多年前，我有一个学生失踪了。<br>
+            他的名字叫辛弃疾。<br><br>
+            他是我带过最好的学生，也是我倾注过最多心血的人之一。我一直没能接受他的消失，直到现在也没有停止寻找。<br><br>
+            这台电脑里保留了许多资料、记录、缓存和我自己整理下来的线索。它们并不完整，也不一定全部可信，但如果你正在看这些内容——请帮我找到他。<br><br>
+            不要轻信屏幕上出现的一切。尤其是那些看起来最像“答案”的东西。
+            <div class="footer-note">最后编辑时间：无法读取</div>
+          </div>`;
+      }
+
+      if(app==='cctv'){
+        title='教室监控查询';
+        cls='window medium';
+        body=`
+          <div class="search-entry">
+            请输入教室号以查询监控片段：
+            <div class="input-row">
+              <input type="text" id="cctvInput" placeholder="请输入教室号" />
+              <button class="btn" onclick="searchCCTV()">查询</button>
+            </div>
+            <div class="hint">仅支持调取已归档的课堂监控截图文字摘要。</div>
+          </div>
+          <div id="cctvResult" class="search-log" style="margin-top:14px"></div>`;
+      }
+
+      if(app==='records'){
+        title='学生档案查询';
+        cls='window medium';
+        body=`
+          <div class="search-entry">
+            请输入学生姓名：
+            <div class="input-row">
+              <input type="text" id="recordInput" placeholder="可输入中文名或英文名" />
+              <button class="btn" onclick="searchRecord()">查询</button>
+            </div>
+          </div>
+          <div id="recordResult" class="search-log" style="margin-top:14px"></div>`;
+      }
+
+      if(app==='search'){
+        title='网络搜索引擎';
+        body=`
+          <div class="searchbar">
+            <input type="text" id="searchInput" placeholder="输入关键词进行检索" style="flex:1;min-width:240px" />
+            <button class="btn" onclick="runSearch()">搜索</button>
+          </div>
+          <div id="searchResult" class="search-log"></div>`;
+      }
+
+      const html=`
+        <div class="${cls}" id="${id}">
+          <div class="window-title">
+            <div class="title-left"><span class="leds"><i></i><i></i><i></i></span><span>${title}</span></div>
+            <button class="close-btn" onclick="closeWindow('${id}')">×</button>
+          </div>
+          <div class="window-body">${body}</div>
+        </div>`;
+      document.getElementById('windows').insertAdjacentHTML('beforeend',html);
+    }
+
+    function readMail(num){
+      const id=`mail_reader_${num}`;
+      closeWindow(id);
+      let title='',content='';
+      if(num===1){
+        title='【系统通知】账户安全验证即将过期';
+        content=`
+          <div class="reader">
+            <div class="mail-content">
+              尊敬的用户：<br>
+              您的教学终端统一账户存在风险，请在 24 小时内完成身份验证，否则账号将被冻结。<br><br>
+              为避免数据丢失，请点击下方链接立即处理：<br>
+              <a href="javascript:void(0)" onclick="phishingClick()" style="color:#7dd3fc">https://q-edu-safe.co/verify</a>
+              <div class="hint">发件地址与官方域名不一致，且语气异常急迫。</div>
+            </div>
+          </div>`;
+      }
+      if(num===2){
+        title='【紧急】奖学金补贴待确认领取';
+        content=`
+          <div class="reader">
+            <div class="mail-content">
+              经系统核验，您有一笔奖学金补贴待签收。若今日 23:59 前未确认，将视为主动放弃。<br><br>
+              请立即访问：<br>
+              <a href="javascript:void(0)" onclick="phishingClick()" style="color:#7dd3fc">https://edu-reward.live/claim-now</a>
+              <div class="hint">链接伪装明显，且没有任何具体金额或编号。</div>
+            </div>
+          </div>`;
+      }
+      if(num===3){
+        title='Jamie：如果你看到这封邮件，请先看懂它';
+        content=`
+          <div class="reader">
+            <div class="mail-content">
+              <div class="puzzle-lines">3 4 6 7 9 10 11 13 14
+4 6 9 11 14
+3 4 6 7 9 11 14
+3 7 9 11 14
+3 4 6 7 9 10 11 14</div>
+              <div class="hint">这串内容看起来不像普通文本，更像是某种按位置筛选后的结果。</div>
+            </div>
+          </div>`;
+      }
+      if(num===4){
+        title='Q市警察局：关于您此前提交的报案记录';
+        content=`
+          <div class="reader">
+            <div class="mail-content">
+              市民您好：<br>
+              我局已收到您此前提交的报案信息，并尝试依据您登记的联系方式进行多次回访。但截至目前，电话始终无人接听，登记住址也未见有人应门。<br><br>
+              若您本人看到此邮件，请尽快与 Q 市警察局案件受理中心取得联系，以便继续推进相关调查。<br><br>
+              注：系统显示，您已于此前数次主动发起联络请求。
+            </div>
+          </div>`;
+      }
+      const html=`
+        <div class="window medium" id="${id}" style="left:190px;top:92px">
+          <div class="window-title">
+            <div class="title-left"><span class="leds"><i></i><i></i><i></i></span><span>${title}</span></div>
+            <button class="close-btn" onclick="closeWindow('${id}')">×</button>
+          </div>
+          <div class="window-body">${content}</div>
+        </div>`;
+      document.getElementById('windows').insertAdjacentHTML('beforeend',html);
+    }
+
+    function phishingClick(){
+      state.phishingLoss+=10000;
+      updateTaskStatus();
+      popup('资金异常变动',`<p class="danger-text">你的账户余额已减少 10000。</p><p>页面在一瞬间自动关闭了。你甚至没来得及看清自己究竟提交了什么。</p>`);
+    }
+
+    function searchCCTV(){
+      const v=(document.getElementById('cctvInput')?.value||'').trim();
+      const box=document.getElementById('cctvResult');
+      if(!box)return;
+      if(v==='2507'){
+        box.innerHTML=`<div class="result-box">监控里有很多在 <strong>2507</strong> 上课的场景。画面噪点很重，只能勉强辨认出黑板上留下的板书：<br><br>
+        2.4.加密<br>
+        加密分为对称加密（symmetric）和非对称加密（asymmetric）<br>
+        对称加密的加密（encryption）和解密密钥（decryption）都是一样的<br>
+        而非对称加密的两者不同，我们分别称为公钥（public key）和私钥（private key）<br>
+        埃特巴什码是对称加密的其中一个例子</div>`;
+      }else{
+        box.innerHTML=`<div class="result-box">未找到该教室号对应的可读监控摘要。</div>`;
+      }
+    }
+
+    function searchRecord(){
+      const raw=(document.getElementById('recordInput')?.value||'').trim();
+      const q=raw.toLowerCase();
+      const box=document.getElementById('recordResult');
+      if(!box)return;
+      if(raw==='辛弃疾' || q==='xinqiji' || q==='xin qiji'){
+        box.innerHTML=`<div class="result-box">
+          姓名：辛弃疾<br>
+          父亲：任我行<br>
+          母亲：辛巴<br>
+          出生日期：2006年2月29日<br>
+          学习科目：计算机，经济，心理，物理，数学<br>
+          评价：入学时曾随父亲姓，但因不知名原因，系统中记录的姓氏后续被修改。爱好计算机科学，曾被班主任 Jamie 老师多次推举为三好学生。
+        </div>`;
+      }else if(q==='tom'){
+        box.innerHTML=`<div class="result-box">
+          姓名：冯唐木<br>
+          出生日期：2010年1月5日<br>
+          学习科目：计算机科学，数学，网络安全，编程学<br>
+          最爱的科目：计算机科学<br>
+          近期评价：从学期开始就对计算机科学表现出异常浓厚的兴趣，尤其关注初代计算机架构。最近一次考试中，他在试卷边缘反复写下多组未知符号，其中包括：<br><br>
+          <span class="puzzle-lines">PRCESS STOAGE UTPUT INPU</span>
+        </div>`;
+      }else if(q==='lewis'){
+        box.innerHTML=`<div class="result-box">
+          姓名：唐小撒<br>
+          父亲：唐凯撒<br>
+          学习科目：计算机科学，数学，心理学，化学<br>
+          最喜欢的科目：ozgs<br>
+          近期评价：此前曾经历家庭变故，精神状态一度十分消沉。但近来像是突然变了一个人，可能是在他最好的朋友帮助下重新振作。根据口述记录，他称呼那位“最好的朋友”为 <strong>gmo</strong>。
+        </div>`;
+      }else{
+        box.innerHTML=`<div class="result-box">未查询到相关学生档案。</div>`;
+      }
+    }
+
+    function runSearch(){
+      const raw=(document.getElementById('searchInput')?.value||'').trim();
+      const q=raw.toLowerCase();
+      const box=document.getElementById('searchResult');
+      if(!box)return;
+
+      if(q.includes('冯诺依曼') || q.includes('von neumann') || q.includes('john von neumann') || q.includes('冯 诺依曼')){
+        box.innerHTML=`
+          <div class="result-box">
+            <strong>约翰·冯·诺依曼（John von Neumann）</strong><br>
+            匈牙利裔美籍数学家、物理学家、计算机科学先驱之一。现代计算机体系结构中最经典的“存储程序”思想，通常被称为冯·诺依曼架构。<br><br>
+            <span class="danger-text">警告：该网页已被匿名黑客攻击，需要输入密码才可解锁隐藏内容。</span><br>
+            <div class="puzzle-lines" style="margin-top:10px">AACDEFAHIJKLMNOPQ12STUVWXYZ (hint:hex)</div>
+            <div class="input-row">
+              <input type="password" id="vnPass" placeholder="输入密码" />
+              <button class="btn" onclick="unlockVN()">解锁</button>
+            </div>
+          </div>`;
+        return;
+      }
+
+      if(q==='root'){
+        box.innerHTML=`<div class="result-box">
+          <strong>ROOT</strong> 是 Q 市知名公司，主要负责进行人形机器人的设计与研发。其创始人唐凯撒原本从事计算机安全领域，后转向人形机器人技术。旗下主力型号 <strong>MFXJT-offset1</strong> 主要面向教育行业，已基本实现自主学习功能。<br><br>
+          但 ROOT 近年来声誉屡受打击。2020 年，其研发主管贾科学因涉嫌进行与人脑相关的人体实验被捕，公司随即与其切割，股价也出现断崖式下跌。2021 年末，唐凯撒病逝。由于其膝下无子女，公司随后转交给一位副总经营。该人行事极为低调，至今外界仍不清楚其真实姓名。<br><br>
+          近期，ROOT 因不明原因大规模裁撤业务，目前仅保留研究部、销售部等少量部门。公开地址显示：<strong>沙王路 2 号</strong>。
+        </div>`;
+        return;
+      }
+
+      if(q==='吴明式' || q==='wumingshi' || q==='wu mingshi'){
+        box.innerHTML=`<div class="result-box">知名灰帽黑客，亦正亦邪，活跃于各大黑客论坛。</div>`;
+        return;
+      }
+
+      if(q==='jörmungandr' || q==='jormungandr' || q==='耶梦加得'){
+        box.innerHTML=`
+          <div class="result-box">
+            耶梦加得，是北欧传说中洛基的儿子，是一条巨大的海蛇。传说它终将环绕整个世界，甚至咬住自己的尾巴，构成衔尾蛇般的闭环。<br><br>
+            你还检索到一个名为 <strong>Jörmungandr</strong> 的网站，但当前无权访问。页面上写着：<br>
+            <span class="warn-text">提示：四位英文字符，以 l 开头。</span>
+            <div class="input-row">
+              <input type="password" id="jormPass" placeholder="输入网站密码" />
+              <button class="btn" onclick="unlockJorm()">进入</button>
+            </div>
+          </div>`;
+        return;
+      }
+
+      if(q==='jackson&mike ai enterprise' || q==='jackson and mike ai enterprise' || q==='jackson&mike' || q==='jackson mike ai enterprise'){
+        if(state.wentToBasement){
+          box.innerHTML=`<div class="result-box danger-text">
+            当你打开这个网页的时候，你整个人一下子僵住了。<br><br>
+            搜索结果页的缩略图里，站着一个你再熟悉不过的身影。不是 Jamie，也不是那些失踪学生，而是——你自己。<br><br>
+            下一秒，你感到意识像被什么缓慢剥离。你试着抬手，试着呼喊，试着确认自己是否仍坐在电脑前，可回应你的，只有无边无际、没有回声的空寂。
+          </div>`;
+          setTimeout(()=>badEnding(),300);
+        }else{
+          box.innerHTML=`<div class="result-box ok-text">恭喜你走到了这里，说明你已经选取了全部正确的选项。后面的内容，将会持续开发中。</div>`;
+        }
+        return;
+      }
+
+      box.innerHTML=`<div class="result-box">没有找到与“${escapeHtml(raw)}”高度相关的结果。</div>`;
+    }
+
+    function unlockVN(){
+      const v=(document.getElementById('vnPass')?.value||'').trim();
+      const box=document.getElementById('searchResult');
+      if(v==='181010'){
+        box.insertAdjacentHTML('beforeend',`<div class="result-box ok-text">恭喜破解密码。<br><br>我是黑客吴明式。我最近一直在调查一起离奇事件：Q 市的中学近期发生了多起失踪案。我追踪了几名失踪学生的网络轨迹，发现他们在失踪之前，都访问过 <strong>Jörmungandr</strong> 这个网站。</div>`);
+      }else{
+        box.insertAdjacentHTML('beforeend',`<div class="result-box danger-text">密码错误。网页上的异常脚本仍在运行。</div>`);
+      }
+    }
+
+    function unlockJorm(){
+      const v=(document.getElementById('jormPass')?.value||'').trim().toLowerCase();
+      const box=document.getElementById('searchResult');
+      if(v==='loop'){
+        state.jormUnlocked=true;
+        box.insertAdjacentHTML('beforeend',`<div class="result-box">你进入了这个网站。页面看起来像某个研究机构的主页，标题写着：<strong>Jackson&amp;Mike AI Enterprise</strong>。<br><br>页面地址栏中还显示出一个具体地点：<strong>沙王路 2 号 -1 层</strong>。<br><br>你是否要驱车直接前往该地点？<div class="choice-bar"><button class="btn danger" onclick="goBasement()">是</button><button class="btn secondary" onclick="staySafe()">否</button></div></div>`);
+      }else{
+        box.insertAdjacentHTML('beforeend',`<div class="result-box danger-text">密码错误。网站拒绝访问。</div>`);
+      }
+    }
+
+    function goBasement(){
+      state.wentToBasement=true;
+      popup('现场回访记录',`<p>你直接前往了那个地址。</p><p>可就在你走到大门前、正准备进入的时候，一阵毫无预兆的眩晕突然袭来。视线像断电一样骤然熄灭。</p><p>等你重新醒来时，你已经回到了自己家里，衣服没换，钥匙还在口袋里，仿佛先前的一切都从未发生过。</p><p class="warn-text">可你的鞋底，确实沾着一层陌生的灰。</p>`,`<button class="btn" onclick="closePopup()">继续</button>`);
+    }
+
+    function staySafe(){
+      popup('你没有前往现场',`<p>你强压下那股立刻出发的冲动，决定暂时留在电脑前，继续整理屏幕里的线索。</p><p class="ok-text">有时候，晚一步，反而能多活很久。</p>`);
+    }
+
+    function badEnding(){
+      if(state.badEnding)return;
+      state.badEnding=true;
+      popup('坏结局：bot',`<p>你的屏幕没有黑掉。</p><p>只是从这一刻开始，坐在屏幕前继续搜索的人，已经不再是“你”了。</p><p class="danger-text"><strong>达成坏结局：bot</strong></p>`,`<button class="btn" onclick="location.reload()">重新开始</button>`);
+    }
+  </script>
+</body>
+</html>
